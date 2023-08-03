@@ -17,8 +17,7 @@ limitations under the License.
 package lvmdriver
 
 import (
-	"runtime"
-
+	svc "github.com/openshift/lvm-driver/pkg/lvmdriver/services"
 	"k8s.io/klog/v2"
 )
 
@@ -29,20 +28,34 @@ type LvmDriverOptions struct {
 }
 
 type LvmDriver struct {
-	name     string
-	nodeID   string
-	endpoint string
-	version  string
+	name          string
+	nodeID        string
+	endpoint      string
+	version       string
+	statusService *svc.StatusService
+	grpcServer    svc.GrpcServer
 }
 
 func NewLvmDriver(options *LvmDriverOptions) *LvmDriver {
 	klog.V(1).Infof("Driver: %v version :%v", options.DriverName, driverVersion)
 
+	// Service setups
+	statusSvc := svc.NewStatusService()
+	idSvc := svc.NewIdentityService(options.DriverName, driverVersion, statusSvc.Ready)
+
+	// The primary grpc server
+	grpcServer := svc.NewGrpcServer(svc.GrpcServerConfig{
+		Endpoint: options.Endpoint,
+		IdServer: idSvc,
+	})
+
 	lvmd := &LvmDriver{
-		name:     options.DriverName,
-		version:  driverVersion,
-		nodeID:   options.NodeID,
-		endpoint: options.Endpoint,
+		name:          options.DriverName,
+		version:       driverVersion,
+		nodeID:        options.NodeID,
+		endpoint:      options.Endpoint,
+		statusService: &statusSvc,
+		grpcServer:    grpcServer,
 	}
 
 	return lvmd
@@ -55,9 +68,8 @@ func (driver *LvmDriver) Run() {
 	}
 	klog.V(1).Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionInfo)
 
-	// TODO: remove this once we have meaningful servers
-	// Wait forever, letting other work commence if needed
-	for {
-		runtime.Gosched()
-	}
+	// Spin up the grpc server
+	driver.grpcServer.Start()
+
+	driver.grpcServer.Wait()
 }
