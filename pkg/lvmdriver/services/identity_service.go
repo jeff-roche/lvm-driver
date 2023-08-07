@@ -18,7 +18,7 @@ type IdentityService struct {
 	name         string
 	version      string
 	logger       logr.Logger
-	capabilities []*csi.PluginCapability
+	capabilities []csi.PluginCapability_Service_Type
 	ready        func() (bool, error)
 }
 
@@ -34,15 +34,8 @@ func NewIdentityService(name string, version string, ready func() (bool, error))
 		name:    name,
 		version: version,
 		logger:  ctrl.Log.WithName(name).WithName("identity_service"),
-		capabilities: []*csi.PluginCapability{
-			{
-				// This should be replaced as we add capabilities
-				Type: &csi.PluginCapability_Service_{
-					Service: &csi.PluginCapability_Service{
-						Type: csi.PluginCapability_Service_UNKNOWN,
-					},
-				},
-			},
+		capabilities: []csi.PluginCapability_Service_Type{
+			csi.PluginCapability_Service_UNKNOWN,
 		},
 	}
 }
@@ -66,8 +59,22 @@ func (s IdentityService) GetPluginInfo(ctx context.Context, req *csi.GetPluginIn
 
 func (s IdentityService) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
 	s.logger.Info("GetPluginCapabilities", "req", req.String())
+
+	capabilities := make([]*csi.PluginCapability, 0, len(s.capabilities))
+
+	for _, cap := range s.capabilities {
+		capabilities = append(capabilities, &csi.PluginCapability{
+			// This should be replaced as we add capabilities
+			Type: &csi.PluginCapability_Service_{
+				Service: &csi.PluginCapability_Service{
+					Type: cap,
+				},
+			},
+		})
+	}
+
 	return &csi.GetPluginCapabilitiesResponse{
-		Capabilities: s.capabilities,
+		Capabilities: capabilities,
 	}, nil
 }
 
