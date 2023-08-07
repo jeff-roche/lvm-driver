@@ -16,8 +16,8 @@ PKG = github.com/openshift/lvm-driver
 EXE_NAME = lvmdriver
 GIT_COMMIT = $(shell git rev-parse HEAD)
 BUILD_DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-DRIVER_VERSION = v0.0.0
-LDFLAGS = -X ${PKG}/pkg/lvmdriver.driverVersion=${DRIVER_VERSION} -X ${PKG}/pkg/lvmdriver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/lvmdriver.buildDate=${BUILD_DATE}
+VERSION = v0.0.0
+LDFLAGS = -X ${PKG}/pkg/lvmdriver.driverVersion=${VERSION} -X ${PKG}/pkg/lvmdriver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/lvmdriver.buildDate=${BUILD_DATE}
 OS ?= linux
 ARCH ?= amd64
 
@@ -39,3 +39,21 @@ build:
 .PHONY: container
 container:
 	$(IMAGE_BUILD_CMD) build --platform=${OS}/${ARCH} -t ${IMG} .
+
+fmt:
+	go fmt ./...
+
+vet:
+	go vet ./...
+
+vendor:
+	go mod tidy && go mod vendor
+
+clean: fmt vet vendor
+
+verify:
+	hack/verify-gofmt.sh
+	hack/verify-deps.sh
+
+test: vendor
+	go test -v -coverprofile=coverage.out `go list ./... | grep -v "e2e"`

@@ -14,7 +14,7 @@ func TestNodeGetCapabilites(t *testing.T) {
 		csi.NodeServiceCapability_RPC_UNKNOWN,
 	}
 
-	nodeSvc := services.NewNodeService("foobar")
+	nodeSvc := services.NewNodeService("NodeGetCapabilitiesSvc")
 	req := &csi.NodeGetCapabilitiesRequest{}
 
 	resp, err := nodeSvc.NodeGetCapabilities(context.Background(), req)
@@ -34,9 +34,19 @@ func TestNodeGetCapabilites(t *testing.T) {
 }
 
 func TestNodePublishVolume(t *testing.T) {
+	nodeSvc := services.NewNodeService("NodePublishVolumeSvc")
+	req := &csi.NodePublishVolumeRequest{}
 
+	resp, err := nodeSvc.NodePublishVolume(context.Background(), req)
+	assert.Nil(t, resp)
+	assert.ErrorContains(t, err, "Unimplemented")
 }
 
 func TestNodeUnpublishVolume(t *testing.T) {
+	nodeSvc := services.NewNodeService("NodeUnpublishVolumeSvc")
+	req := &csi.NodeUnpublishVolumeRequest{}
 
+	resp, err := nodeSvc.NodeUnpublishVolume(context.Background(), req)
+	assert.Nil(t, resp)
+	assert.ErrorContains(t, err, "Unimplemented")
 }

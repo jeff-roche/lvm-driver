@@ -1,9 +1,9 @@
-package utils_test
+package utils
 
 import (
 	"testing"
 
-	"github.com/openshift/lvm-driver/pkg/lvmdriver/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseEndpoint(t *testing.T) {
@@ -37,7 +37,7 @@ func TestParseEndpoint(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			p, a, err := utils.ParseEndpoint(test.endpoint)
+			p, a, err := ParseEndpoint(test.endpoint)
 
 			if err != nil {
 				if test.expectErr {
@@ -58,6 +58,42 @@ func TestParseEndpoint(t *testing.T) {
 			if a != test.addr {
 				t.Errorf("wrong address returned. expected %s, got %s", test.addr, a)
 			}
+		})
+	}
+}
+
+func TestGetLogLevel(t *testing.T) {
+	tests := []struct {
+		desc          string
+		method        string
+		expectedLevel int32
+	}{
+		{
+			desc:          "identity probe log level",
+			method:        "/csi.v1.Identity/Probe",
+			expectedLevel: 8,
+		},
+		{
+			desc:          "node get capabilities log level",
+			method:        "/csi.v1.Node/NodeGetCapabilities",
+			expectedLevel: 8,
+		},
+		{
+			desc:          "node get volume stats log level",
+			method:        "/csi.v1.Node/NodeGetVolumeStats",
+			expectedLevel: 8,
+		},
+		{
+			desc:          "standard log level",
+			method:        "/csi.v1.foobar",
+			expectedLevel: 2,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			level := getLogLevel(test.method)
+			assert.Equal(t, test.expectedLevel, level, "incorrect log level returned")
 		})
 	}
 }
