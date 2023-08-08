@@ -42,11 +42,12 @@ func NewLvmDriver(options *LvmDriverOptions) *LvmDriver {
 	// Service setups
 	statusSvc := svc.NewStatusService()
 	idSvc := svc.NewIdentityService(options.DriverName, driverVersion, statusSvc.Ready)
-
+	nodeSvc := svc.NewNodeService(options.DriverName, options.NodeID)
 	// The primary grpc server
 	grpcServer := svc.NewGrpcServer(svc.GrpcServerConfig{
-		Endpoint: options.Endpoint,
-		IdServer: idSvc,
+		Endpoint:   options.Endpoint,
+		IdServer:   idSvc,
+		NodeServer: nodeSvc,
 	})
 
 	lvmd := &LvmDriver{

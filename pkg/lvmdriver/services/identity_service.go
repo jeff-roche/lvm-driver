@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/go-logr/logr"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/klog/v2"
 )
 
 // IdentityService handles requests from the container orchestrator
@@ -17,7 +16,6 @@ type IdentityService struct {
 	csi.UnimplementedIdentityServer
 	name         string
 	version      string
-	logger       logr.Logger
 	capabilities []csi.PluginCapability_Service_Type
 	ready        func() (bool, error)
 }
@@ -33,7 +31,6 @@ func NewIdentityService(name string, version string, ready func() (bool, error))
 		ready:   ready,
 		name:    name,
 		version: version,
-		logger:  ctrl.Log.WithName(name).WithName("identity_service"),
 		capabilities: []csi.PluginCapability_Service_Type{
 			csi.PluginCapability_Service_UNKNOWN,
 		},
@@ -41,8 +38,7 @@ func NewIdentityService(name string, version string, ready func() (bool, error))
 }
 
 func (s IdentityService) GetPluginInfo(ctx context.Context, req *csi.GetPluginInfoRequest) (*csi.GetPluginInfoResponse, error) {
-	s.logger.Info("GetPluginInfo", "req", req.String())
-
+	klog.V(2).Info("received PluginInfoRequest")
 	if s.name == "" {
 		return nil, status.Error(codes.Unavailable, "Driver name not configured")
 	}
@@ -51,15 +47,16 @@ func (s IdentityService) GetPluginInfo(ctx context.Context, req *csi.GetPluginIn
 		return nil, status.Error(codes.Unavailable, "Driver is missing version")
 	}
 
-	return &csi.GetPluginInfoResponse{
+	resp := &csi.GetPluginInfoResponse{
 		Name:          s.name,
 		VendorVersion: s.version,
-	}, nil
+	}
+
+	return resp, nil
 }
 
 func (s IdentityService) GetPluginCapabilities(ctx context.Context, req *csi.GetPluginCapabilitiesRequest) (*csi.GetPluginCapabilitiesResponse, error) {
-	s.logger.Info("GetPluginCapabilities", "req", req.String())
-
+	klog.V(2).Info("received GetPluginCapabilitiesRequest")
 	capabilities := make([]*csi.PluginCapability, 0, len(s.capabilities))
 
 	for _, cap := range s.capabilities {
@@ -79,10 +76,8 @@ func (s IdentityService) GetPluginCapabilities(ctx context.Context, req *csi.Get
 }
 
 func (s IdentityService) Probe(ctx context.Context, req *csi.ProbeRequest) (*csi.ProbeResponse, error) {
-	s.logger.Info("Probe", "req", req.String())
 	ok, err := s.ready()
 	if err != nil {
-		s.logger.Error(err, "probe failed")
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 

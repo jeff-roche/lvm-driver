@@ -2,33 +2,50 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/go-logr/logr"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/klog/v2"
 )
 
 type NodeService struct {
 	csi.UnimplementedNodeServer
-	logger       logr.Logger
 	mtx          sync.RWMutex // Need to handle concurrent system calls
 	capabilities []csi.NodeServiceCapability_RPC_Type
+	nodeId       string
+	topologies   *csi.Topology
 }
 
-func NewNodeService(name string) csi.NodeServer {
+func NewNodeService(name string, nodeId string) csi.NodeServer {
+	topologyKey := fmt.Sprintf("topology.%s/node", name)
+
 	return &NodeService{
-		logger: ctrl.Log.WithName(name).WithName("node_service"),
+		nodeId: nodeId,
 		capabilities: []csi.NodeServiceCapability_RPC_Type{
 			csi.NodeServiceCapability_RPC_UNKNOWN,
+		},
+		topologies: &csi.Topology{
+			Segments: map[string]string{
+				topologyKey: nodeId,
+			},
 		},
 	}
 }
 
+func (n *NodeService) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	klog.V(2).Infof("received %#v", *req)
+
+	return &csi.NodeGetInfoResponse{
+		NodeId:             n.nodeId,
+		AccessibleTopology: n.topologies,
+	}, nil
+}
+
 func (n *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	n.logger.Info("GetNodeCapabilities", "req", req.String())
+	klog.V(2).Infof("received %#v", req)
 	csiCapabilities := make([]*csi.NodeServiceCapability, 0, len(n.capabilities))
 
 	for _, cap := range n.capabilities {
@@ -47,7 +64,7 @@ func (n *NodeService) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetC
 }
 
 func (n *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	n.logger.Info("NodePublishVolume", "req", req.String())
+	klog.V(2).Infof("received NodePublishVolumeRequest: %v", req)
 	n.mtx.Lock()
 	defer n.mtx.Unlock()
 
@@ -55,7 +72,7 @@ func (n *NodeService) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (n *NodeService) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	n.logger.Info("NodeUnpublishVolume", "req", req.String())
+	klog.V(2).Infof("received NodeUnpublishVolumeRequest: %v", req)
 	n.mtx.Lock()
 	defer n.mtx.Unlock()
 

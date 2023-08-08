@@ -25,6 +25,7 @@ ARCH ?= amd64
 IMAGE_REGISTRY ?= quay.io
 REGISTRY_NAMESPACE ?= lvms_dev
 IMAGE_TAG ?= $(GIT_COMMIT)
+LIVE_TAG ?= latest
 IMAGE_NAME ?= lvm-driver
 IMAGE_REPO ?= $(IMAGE_REGISTRY)/$(REGISTRY_NAMESPACE)/$(IMAGE_NAME)
 IMG ?= $(IMAGE_REPO):$(IMAGE_TAG)
@@ -39,6 +40,10 @@ build:
 .PHONY: container
 container:
 	$(IMAGE_BUILD_CMD) build --platform=${OS}/${ARCH} -t ${IMG} .
+
+tag_and_push:
+	$(IMAGE_BUILD_CMD) tag ${IMG} ${IMAGE_REPO}:${LIVE_TAG}
+	$(IMAGE_BUILD_CMD) push ${IMG} ${IMAGE_REPO}:${LIVE_TAG}
 
 fmt:
 	go fmt ./...
