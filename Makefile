@@ -60,5 +60,5 @@ verify:
 	hack/verify-gofmt.sh
 	hack/verify-deps.sh
 
-test: vendor
+test:
 	go test -v -coverprofile=coverage.out `go list ./... | grep -v "e2e"`

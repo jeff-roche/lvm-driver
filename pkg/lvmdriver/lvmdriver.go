@@ -71,6 +71,4 @@ func (driver *LvmDriver) Run() {
 
 	// Spin up the grpc server
 	driver.grpcServer.Start()
-
-	driver.grpcServer.Wait()
 }

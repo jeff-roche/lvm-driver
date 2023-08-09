@@ -14,8 +14,6 @@ import (
 type GrpcServer interface {
 	// start the service
 	Start()
-	// waits for the service to stop
-	Wait()
 	// Graceful shutdown
 	Stop()
 	// Forced shutdown
@@ -48,18 +46,20 @@ func NewGrpcServer(config GrpcServerConfig) GrpcServer {
 func (s *grpcServer) Start() {
 	s.wg.Add(1)
 	go s.serve()
-}
 
-func (s *grpcServer) Wait() {
 	s.wg.Wait()
 }
 
 func (s *grpcServer) Stop() {
-	s.server.GracefulStop()
+	if s.server != nil {
+		s.server.GracefulStop()
+	}
 }
 
 func (s *grpcServer) ForceStop() {
-	s.server.Stop()
+	if s.server != nil {
+		s.server.Stop()
+	}
 }
 
 func (s *grpcServer) serve() {
