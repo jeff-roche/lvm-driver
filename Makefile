@@ -16,8 +16,8 @@ PKG = github.com/openshift/lvm-driver
 EXE_NAME = lvmdriver
 GIT_COMMIT = $(shell git rev-parse HEAD)
 BUILD_DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-DRIVER_VERSION = v0.0.0
-LDFLAGS = -X ${PKG}/pkg/lvmdriver.driverVersion=${DRIVER_VERSION} -X ${PKG}/pkg/lvmdriver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/lvmdriver.buildDate=${BUILD_DATE}
+VERSION = v0.0.0
+LDFLAGS = -X ${PKG}/pkg/lvmdriver.driverVersion=${VERSION} -X ${PKG}/pkg/lvmdriver.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/lvmdriver.buildDate=${BUILD_DATE}
 OS ?= linux
 ARCH ?= amd64
 
@@ -25,6 +25,7 @@ ARCH ?= amd64
 IMAGE_REGISTRY ?= quay.io
 REGISTRY_NAMESPACE ?= lvms_dev
 IMAGE_TAG ?= $(GIT_COMMIT)
+LIVE_TAG ?= latest
 IMAGE_NAME ?= lvm-driver
 IMAGE_REPO ?= $(IMAGE_REGISTRY)/$(REGISTRY_NAMESPACE)/$(IMAGE_NAME)
 IMG ?= $(IMAGE_REPO):$(IMAGE_TAG)
@@ -39,3 +40,25 @@ build:
 .PHONY: container
 container:
 	$(IMAGE_BUILD_CMD) build --platform=${OS}/${ARCH} -t ${IMG} .
+
+tag_and_push:
+	$(IMAGE_BUILD_CMD) tag ${IMG} ${IMAGE_REPO}:${LIVE_TAG}
+	$(IMAGE_BUILD_CMD) push ${IMG} ${IMAGE_REPO}:${LIVE_TAG}
+
+fmt:
+	go fmt ./...
+
+vet:
+	go vet ./...
+
+vendor:
+	go mod tidy && go mod vendor
+
+clean: fmt vet vendor
+
+verify:
+	hack/verify-gofmt.sh
+	hack/verify-deps.sh
+
+test:
+	go test -v -coverprofile=coverage.out `go list ./... | grep -v "e2e"`
